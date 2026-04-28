@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  <div style="padding: 1.5rem; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border-radius: 1rem; display: inline-block; margin-bottom: 1rem;">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/>
+      <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/>
+      <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4 4.5 4.5 0 0 1-3-4"/>
+    </svg>
+  </div>
+  
+  <h1>SentinelBrain</h1>
+  <p><strong>The AI-Native DevOps Second Brain</strong></p>
+  
+  <p>
+    <a href="https://sentinel-brain.vercel.app"><b>Live Demo</b></a> •
+    <a href="#features"><b>Features</b></a> •
+    <a href="ARCHITECTURE.md"><b>Architecture Docs</b></a>
+  </p>
+</div>
 
-## Getting Started
+---
 
-First, run the development server:
+## ⚡️ Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+SentinelBrain replaces fragmented DevOps dashboards with a single, agentic command center. Instead of hunting through Datadog, AWS, and PagerDuty during an outage, engineers simply ask natural language questions (e.g., *"Why is the DB slow?"*). 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The AI dynamically generates the exact diagnostic UI required (Generative UI) in real-time, cross-referencing your company's internal runbooks to suggest immediate remediation steps.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Built for YC S26.**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🌟 Key Features
 
-## Learn More
+* **🧠 Generative UI:** The AI streams interactive React components ("Shards") instead of plain text—rendering live charts, terminal logs, and system health grids on the fly.
+* **📚 Runbook Memory:** SentinelBrain acts as a "Second Brain," mapping current infrastructure symptoms to historical incident playbooks.
+* **🔌 Enterprise Connectors:** A unified hub built to ingest telemetry from AWS, Azure, Kubernetes, Datadog, PagerDuty, and more.
+* **⚠️ One-Click Remediation:** "Danger Zone" action buttons allow engineers to rollback deployments or restart clusters directly from the chat interface.
 
-To learn more about Next.js, take a look at the following resources:
+## 🛠️ Tech Stack
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* **Frontend:** Next.js 16 (App Router), React 19, Tailwind CSS
+* **AI Engine:** Vercel AI SDK v6
+* **LLM:** Groq (Llama-3.1-8b) for ultra-fast, deterministic tool calling
+* **Visuals:** Recharts, Lucide Icons, Custom CSS glassmorphism
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚀 Getting Started
 
-## Deploy on Vercel
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/shivam-pawar-7217/Sentinal_Brain.git
+   cd Sentinal_Brain
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Set up environment variables**
+   Create a `.env.local` file and add your Groq API key:
+   ```env
+   GROQ_API_KEY=gsk_your_api_key_here
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+   Navigate to `http://localhost:3000` to access the Command Center.
+
+## 📖 Architecture
+
+For a deep dive into how the AI Agent tools map to the Generative UI shards, please read the [Architecture Guide](./ARCHITECTURE.md).
+
+## 📄 License
+MIT License - Copyright (c) 2026 SentinelBrain Inc.
