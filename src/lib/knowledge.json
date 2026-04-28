@@ -1,0 +1,57 @@
+{
+  "runbooks": [
+    {
+      "id": "rb-001",
+      "title": "PostgreSQL Latency Spike Playbook",
+      "category": "database",
+      "keywords": ["db", "database", "postgres", "latency", "slow", "queries", "spike"],
+      "severity": "P1",
+      "last_triggered": "2026-04-15T14:32:00Z",
+      "resolution_time_avg": "18 minutes",
+      "content": "## PostgreSQL Latency Spike\n\n### Historical Pattern\nThis incident has occurred 3 times in the past 60 days. Root cause was always one of:\n1. **Missing index on `orders.created_at`** (2 of 3 times) — The analytics daily-rollup query does a full table scan when the date range exceeds 30 days.\n2. **Connection pool exhaustion** (1 of 3 times) — The order-service was leaking connections due to unclosed transactions in the retry logic.\n\n### What Worked Last Time (April 15)\n1. Killed all queries running > 5000ms\n2. Flushed the Redis cache (stale cache was causing retry storms)\n3. Added index: `CREATE INDEX idx_orders_created_at ON orders(created_at DESC)`\n4. Restarted the analytics-worker with connection pool limit reduced from 50 → 20\n\n### What Did NOT Work\n- Rebooting PostgreSQL — made it worse because all connections reconnected simultaneously\n- Scaling up read replicas — the bottleneck was on the primary (write locks)\n\n### Prevention\n- Set up query timeout at 3000ms in pg_config\n- Add circuit breaker to analytics-worker\n- Monitor `pg_stat_activity` for connections > 100"
+    },
+    {
+      "id": "rb-002",
+      "title": "Payment Gateway Failure Recovery",
+      "category": "payments",
+      "keywords": ["payment", "stripe", "adyen", "gateway", "checkout", "failure", "timeout"],
+      "severity": "P0",
+      "last_triggered": "2026-04-22T09:15:00Z",
+      "resolution_time_avg": "12 minutes",
+      "content": "## Payment Gateway Failure\n\n### Historical Pattern\nStripe outages have hit us twice in Q1 2026. Both times the pattern was identical:\n1. Response times spike from ~150ms to 8-30 seconds\n2. Success rate drops below 50% within 3 minutes\n3. Error codes: primarily GATEWAY_TIMEOUT and CONNECTION_REFUSED\n\n### What Worked Last Time (April 22)\n1. Immediately switched traffic to Adyen fallback (reduced blast radius by 70%)\n2. Enabled the payment retry queue with exponential backoff\n3. Put up a customer-facing status page banner within 2 minutes\n4. Stripe confirmed their side issue and resolved in ~25 minutes\n\n### Critical: Do NOT\n- Do NOT retry failed payments automatically without idempotency keys — we double-charged 14 customers last time\n- Do NOT disable the payment service entirely — it breaks the cart flow for everyone\n\n### Failover Architecture\n- Primary: Stripe (85% of traffic)\n- Fallback: Adyen (15% → 100% during Stripe outage)\n- Switch command: `kubectl set env deployment/payment-service GATEWAY_PRIMARY=adyen`"
+    },
+    {
+      "id": "rb-003",
+      "title": "Redis Cache Invalidation Storm",
+      "category": "infrastructure",
+      "keywords": ["redis", "cache", "invalidation", "storm", "memory", "flush"],
+      "severity": "P2",
+      "last_triggered": "2026-03-28T18:45:00Z",
+      "resolution_time_avg": "8 minutes",
+      "content": "## Redis Cache Invalidation Storm\n\n### Pattern\nWhen the product catalog service deploys, it invalidates ALL cache keys at once. This causes a thundering herd to PostgreSQL.\n\n### Fix\n1. Use staggered invalidation: `SCAN` + random delay between deletes\n2. Pre-warm critical cache keys before invalidation\n3. If urgent: restart Redis with `--maxmemory-policy allkeys-lru`"
+    },
+    {
+      "id": "rb-004",
+      "title": "High CPU on API Gateway",
+      "category": "infrastructure",
+      "keywords": ["cpu", "api", "gateway", "high", "load", "throttle"],
+      "severity": "P2",
+      "last_triggered": "2026-04-01T11:20:00Z",
+      "resolution_time_avg": "5 minutes",
+      "content": "## API Gateway CPU Spike\n\n### Root Cause History\n- Usually caused by a search indexing job that runs uncapped\n- The `/api/search` endpoint has no rate limiting and gets hammered by the mobile app's autocomplete\n\n### Quick Fix\n1. Scale API gateway to 4 replicas: `kubectl scale deployment/api-gateway --replicas=4`\n2. Enable rate limiting: 100 req/s per IP on `/api/search`\n3. Check if the search indexer cron is running during peak hours (it shouldn't be)"
+    }
+  ],
+  "team_context": {
+    "on_call": "Shiva (Platform Engineering)",
+    "escalation": ["Shiva → Rohit (DevOps Lead) → VP Engineering"],
+    "slack_channel": "#incident-response",
+    "status_page": "https://status.sentinelbrain.dev",
+    "last_deploy": {
+      "service": "payment-service",
+      "version": "v2.15.1",
+      "timestamp": "2026-04-28T08:30:00Z",
+      "commit": "a3f8c2d",
+      "author": "rohit"
+    }
+  }
+}
