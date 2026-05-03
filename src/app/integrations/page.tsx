@@ -38,10 +38,13 @@ const TABS = ["All", "Cloud", "Monitoring", "Incidents", "Comms", "Infra", "CI/C
 
 // ─── AWS Connection Modal ─────────────────────────────────────────────────────
 
-function AWSModal({ open, onClose, onConnected }: {
+function AWSModal({ open, onClose, onConnected, onDisconnected, isConnected, connectedArn }: {
   open: boolean;
   onClose: () => void;
   onConnected: (arn: string) => void;
+  onDisconnected: () => void;
+  isConnected: boolean;
+  connectedArn: string | null;
 }) {
   const [step, setStep] = useState(1);
   const [arn, setArn] = useState("");
@@ -99,6 +102,19 @@ function AWSModal({ open, onClose, onConnected }: {
     setSaving(false);
   };
 
+  const handleDisconnect = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/integrations/aws", { method: "DELETE" });
+      if (res.ok) {
+        onDisconnected();
+        onClose();
+        setStep(1);
+      }
+    } catch {}
+    setSaving(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="relative w-full max-w-lg rounded-2xl border border-white/[0.06] bg-[#0c0f15] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -109,8 +125,8 @@ function AWSModal({ open, onClose, onConnected }: {
               {logos.aws}
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">Connect AWS CloudWatch</h2>
-              <p className="text-[10px] text-slate-500">Cross-Account IAM Role Assumption</p>
+              <h2 className="text-sm font-semibold text-white">{isConnected ? "AWS CloudWatch Settings" : "Connect AWS CloudWatch"}</h2>
+              <p className="text-[10px] text-slate-500">{isConnected ? "Integration Active" : "Cross-Account IAM Role Assumption"}</p>
             </div>
           </div>
           <button onClick={() => { onClose(); setStep(1); }} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white/5 hover:text-white">
@@ -118,26 +134,67 @@ function AWSModal({ open, onClose, onConnected }: {
           </button>
         </div>
 
-        {/* Step Indicators */}
-        <div className="mb-6 flex items-center gap-2">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex flex-1 items-center gap-2">
-              <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                step > s ? "bg-emerald-500 text-white" : step === s ? "bg-indigo-500 text-white" : "bg-white/[0.06] text-slate-600"
-              }`}>
-                {step > s ? <Check className="h-3 w-3" /> : s}
-              </div>
-              <span className={`text-[10px] font-medium ${step >= s ? "text-slate-300" : "text-slate-600"}`}>
-                {s === 1 ? "Create Role" : s === 2 ? "Paste ARN" : "Verify"}
-              </span>
-              {s < 3 && <div className={`h-px flex-1 ${step > s ? "bg-emerald-500/40" : "bg-white/[0.06]"}`} />}
-            </div>
-          ))}
-        </div>
-
-        {/* ── Step 1: Launch CloudFormation ──────────────────── */}
-        {step === 1 && (
+        {isConnected ? (
           <div>
+            <div className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
+                  <Check className="h-3 w-3 text-emerald-400" />
+                </div>
+                <h3 className="text-xs font-semibold text-emerald-400">Connection Healthy</h3>
+              </div>
+              <p className="text-[11px] text-slate-400">SentinelBrain is actively pulling telemetry from your AWS environment.</p>
+            </div>
+
+            <div className="mb-6 rounded-lg border border-white/[0.04] bg-white/[0.02] p-4">
+              <h4 className="mb-3 text-xs font-medium text-slate-300">Configuration</h4>
+              <div className="space-y-3 text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">IAM Role ARN</span>
+                  <span className="font-mono text-slate-300">{connectedArn?.slice(0, 30)}...</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Permissions</span>
+                  <span className="text-emerald-400">Read-Only</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Metrics Synced</span>
+                  <span className="text-indigo-400">Live Streaming</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleDisconnect}
+              disabled={saving}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 py-3 text-xs font-semibold text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-40"
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+              Disconnect AWS
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Step Indicators */}
+            <div className="mb-6 flex items-center gap-2">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex flex-1 items-center gap-2">
+                  <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                    step > s ? "bg-emerald-500 text-white" : step === s ? "bg-indigo-500 text-white" : "bg-white/[0.06] text-slate-600"
+                  }`}>
+                    {step > s ? <Check className="h-3 w-3" /> : s}
+                  </div>
+                  <span className={`text-[10px] font-medium ${step >= s ? "text-slate-300" : "text-slate-600"}`}>
+                    {s === 1 ? "Create Role" : s === 2 ? "Paste ARN" : "Verify"}
+                  </span>
+                  {s < 3 && <div className={`h-px flex-1 ${step > s ? "bg-emerald-500/40" : "bg-white/[0.06]"}`} />}
+                </div>
+              ))}
+            </div>
+
+            {/* ── Step 1: Launch CloudFormation ──────────────────── */}
+            {step === 1 && (
+              <div>
             <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-indigo-500/10 bg-indigo-500/5 p-3">
               <Shield className="mt-0.5 h-4 w-4 shrink-0 text-indigo-400" />
               <p className="text-[11px] leading-relaxed text-slate-400">
@@ -301,6 +358,8 @@ function AWSModal({ open, onClose, onConnected }: {
             </div>
           </div>
         )}
+          </>
+        )}
       </div>
     </div>
   );
@@ -314,6 +373,7 @@ export default function IntegrationsPage() {
   const [search, setSearch] = useState("");
   const [items, setItems] = useState(INTEGRATIONS);
   const [awsModalOpen, setAwsModalOpen] = useState(false);
+  const [awsArn, setAwsArn] = useState<string | null>(null);
 
   useEffect(() => {
     if (!localStorage.getItem("sb_auth")) router.replace("/login");
@@ -322,6 +382,7 @@ export default function IntegrationsPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.connected) {
+          setAwsArn(data.roleArn);
           setItems((prev) =>
             prev.map((i) =>
               i.id === "aws"
@@ -342,7 +403,8 @@ export default function IntegrationsPage() {
     }
   };
 
-  const handleAWSConnected = () => {
+  const handleAWSConnected = (arn: string) => {
+    setAwsArn(arn);
     setItems((prev) =>
       prev.map((i) =>
         i.id === "aws"
@@ -350,6 +412,11 @@ export default function IntegrationsPage() {
           : i
       )
     );
+  };
+
+  const handleAWSDisconnected = () => {
+    setAwsArn(null);
+    setItems((prev) => prev.map((i) => i.id === "aws" ? { ...i, connected: false } : i));
   };
 
   const list = items.filter((i) => {
@@ -363,7 +430,14 @@ export default function IntegrationsPage() {
   return (
     <div className="min-h-screen bg-[#050709] text-slate-200">
       {/* AWS Modal */}
-      <AWSModal open={awsModalOpen} onClose={() => setAwsModalOpen(false)} onConnected={handleAWSConnected} />
+      <AWSModal 
+        open={awsModalOpen} 
+        onClose={() => setAwsModalOpen(false)} 
+        onConnected={handleAWSConnected}
+        onDisconnected={handleAWSDisconnected}
+        isConnected={items.find(i => i.id === "aws")?.connected || false}
+        connectedArn={awsArn}
+      />
 
       {/* Header */}
       <header className="border-b border-white/[0.04] bg-[#080a0e]/80 backdrop-blur-xl">
