@@ -523,17 +523,31 @@ export default function SentinelBrainPage() {
     setTimeout(() => setCopied(false), 2000);
   }, [messages]);
 
-  const sidebarSessions: ChatSession[] = useMemo(
-    () =>
-      sessions.map((s) => ({
-        id: s.id,
-        title: s.title,
-        timestamp: s.timestamp,
-        messageCount: s.messages.length,
-        hasIncident: s.hasIncident,
-      })),
-    [sessions]
-  );
+  const sidebarSessions: ChatSession[] = useMemo(() => {
+    const list = sessions.map((s) => ({
+      id: s.id,
+      title: s.title,
+      timestamp: s.timestamp,
+      messageCount: s.messages.length,
+      hasIncident: s.hasIncident,
+    }));
+
+    // If we are in a new chat state (no active session and no messages yet),
+    // prepend an optimistic "New Chat" entry to the list.
+    if (!activeSessionId && messages.length === 0) {
+      return [
+        {
+          id: "new",
+          title: "New Conversation",
+          timestamp: "Just now",
+          messageCount: 0,
+          hasIncident: false,
+        },
+        ...list,
+      ];
+    }
+    return list;
+  }, [sessions, activeSessionId, messages]);
 
   return (
     <div className="flex h-screen flex-col bg-[#050709]">

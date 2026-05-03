@@ -94,7 +94,7 @@ export function Sidebar({
                 <div
                   key={session.id}
                   className={`group relative mb-1 cursor-pointer rounded-lg px-3 py-2.5 transition-all ${
-                    activeSessionId === session.id
+                    activeSessionId === session.id || (activeSessionId === null && session.id === "new")
                       ? "bg-indigo-500/10 ring-1 ring-indigo-500/20"
                       : "hover:bg-white/[0.03]"
                   }`}
