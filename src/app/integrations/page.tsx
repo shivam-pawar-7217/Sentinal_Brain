@@ -19,6 +19,7 @@ interface Integration {
 
 const INTEGRATIONS: Integration[] = [
   { id: "aws", name: "AWS CloudWatch", category: "Cloud", description: "EC2, RDS, Lambda metrics & alarms", connected: false, isReal: true },
+  { id: "github", name: "GitHub", category: "CI/CD", description: "Repositories, commits, PR checks", connected: false, isReal: true },
   { id: "azure", name: "Azure Monitor", category: "Cloud", description: "VMs, SQL, AKS cluster telemetry", connected: false },
   { id: "gcp", name: "Google Cloud Ops", category: "Cloud", description: "GCE, Cloud SQL, GKE monitoring", connected: false },
   { id: "grafana", name: "Grafana Cloud", category: "Monitoring", description: "Prometheus, Loki, Tempo", connected: false },
@@ -28,7 +29,6 @@ const INTEGRATIONS: Integration[] = [
   { id: "teams", name: "Microsoft Teams", category: "Comms", description: "Notifications, adaptive cards", connected: false },
   { id: "kubernetes", name: "Kubernetes", category: "Infra", description: "Cluster health, pods, deployments", connected: false },
   { id: "terraform", name: "Terraform Cloud", category: "Infra", description: "State, drift detection, plans", connected: false },
-  { id: "github", name: "GitHub", category: "CI/CD", description: "Repositories, commits, PR checks", connected: false, isReal: true },
   { id: "argocd", name: "Argo CD", category: "CI/CD", description: "GitOps, sync status, rollbacks", connected: false },
 ];
 
@@ -584,11 +584,21 @@ export default function IntegrationsPage() {
     setItems((prev) => prev.map((i) => i.id === "github" ? { ...i, connected: false } : i));
   };
 
-  const list = items.filter((i) => {
-    if (tab !== "All" && i.category !== tab) return false;
-    if (search && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
-    return true;
-  });
+  const list = items
+    .filter((i) => {
+      if (tab !== "All" && i.category !== tab) return false;
+      if (search && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      // 1. Connected first
+      if (a.connected && !b.connected) return -1;
+      if (!a.connected && b.connected) return 1;
+      // 2. Real/Live first
+      if (a.isReal && !b.isReal) return -1;
+      if (!a.isReal && b.isReal) return 1;
+      return 0;
+    });
 
   const connected = items.filter((i) => i.connected).length;
 
