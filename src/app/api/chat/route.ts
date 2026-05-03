@@ -8,7 +8,20 @@ import {
   getPaymentLogs,
   getSystemHealth,
 } from "@/lib/mock-data";
+import { fetchLiveCloudWatchMetrics } from "@/lib/aws";
 import knowledgeBase from "@/lib/knowledge.json";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+// Read saved AWS connection
+function getAWSConnection(): { roleArn: string; region: string } | null {
+  try {
+    const data = JSON.parse(readFileSync(join(process.cwd(), "data", "connections.json"), "utf-8"));
+    return data.aws || null;
+  } catch {
+    return null;
+  }
+}
 
 export const maxDuration = 60;
 
@@ -56,6 +69,7 @@ export async function POST(req: Request) {
 Your capabilities:
 - Monitor infrastructure health across all services
 - Diagnose database performance issues, payment gateway failures, and service degradations
+- Fetch LIVE metrics from connected AWS CloudWatch integrations
 - Surface relevant metrics, logs, and remediation actions
 - Provide root-cause analysis with actionable recommendations
 - Search internal runbooks and incident history for past resolutions
@@ -64,14 +78,15 @@ Behavioral rules:
 1. When asked about database issues (slow DB, latency, queries), ALWAYS call fetchDBMetrics AND getRecentSlowLogs AND searchKnowledgeBase tools.
 2. When asked about payment issues, ALWAYS call fetchPaymentMetrics AND getPaymentLogs AND searchKnowledgeBase tools.
 3. When asked about system health or overall status, ALWAYS call getSystemHealth tool.
-4. When diagnosing issues, call getRemediationActions to show available fixes.
-5. ALWAYS call searchKnowledgeBase to check if we have a runbook for this type of incident. Reference past incidents in your analysis.
-6. After calling tools, provide a concise root-cause analysis. Be specific about what the data shows.
-7. Use technical language. You are talking to senior engineers.
-8. Format your analysis in well-structured markdown with clear sections: **Impact**, **Root Cause**, **Evidence**, **Historical Context**, **Recommended Actions**.
-9. Always call multiple tools when relevant — show the full picture.
-10. When referencing past incidents, say things like "Based on our runbook, the last time this happened on [date], we resolved it by..."
-11. Include the on-call engineer and escalation path when severity is P0 or P1.`,
+4. When asked about AWS infrastructure, EC2, CPU, Lambda, API Gateway, or any cloud metrics, ALWAYS call analyzeAWSMetrics to fetch LIVE data from the user's connected AWS account.
+5. When diagnosing issues, call getRemediationActions to show available fixes.
+6. ALWAYS call searchKnowledgeBase to check if we have a runbook for this type of incident. Reference past incidents in your analysis.
+7. After calling tools, provide a concise root-cause analysis. Be specific about what the data shows.
+8. Use technical language. You are talking to senior engineers.
+9. Format your analysis in well-structured markdown with clear sections: **Impact**, **Root Cause**, **Evidence**, **Historical Context**, **Recommended Actions**.
+10. Always call multiple tools when relevant — show the full picture.
+11. When referencing past incidents, say things like "Based on our runbook, the last time this happened on [date], we resolved it by..."
+12. Include the on-call engineer and escalation path when severity is P0 or P1.`,
     messages: await convertToModelMessages(messages),
     tools: {
       fetchDBMetrics: {
@@ -152,6 +167,61 @@ Behavioral rules:
         }),
         execute: async ({ query }: { query: string }) => {
           return searchRunbooks(query);
+        },
+      },
+      analyzeAWSMetrics: {
+        description:
+          "Fetch LIVE metrics from the user's connected AWS CloudWatch account. Use this when investigating EC2 CPU spikes, Lambda errors, API Gateway latency, RDS performance, or any AWS infrastructure issue. Returns real-time metric data points.",
+        inputSchema: z.object({
+          metricName: z
+            .string()
+            .describe("AWS CloudWatch metric name, e.g. 'CPUUtilization', 'NetworkIn', 'Errors', 'Latency', 'DatabaseConnections'."),
+          namespace: z
+            .string()
+            .describe("AWS CloudWatch namespace, e.g. 'AWS/EC2', 'AWS/Lambda', 'AWS/ApiGateway', 'AWS/RDS'."),
+          dimensionName: z
+            .string()
+            .optional()
+            .describe("Dimension name to filter, e.g. 'InstanceId', 'FunctionName'."),
+          dimensionValue: z
+            .string()
+            .optional()
+            .describe("Dimension value, e.g. 'i-0123456789abcdef0', 'my-function'."),
+        }),
+        execute: async ({ metricName, namespace, dimensionName, dimensionValue }: {
+          metricName: string;
+          namespace: string;
+          dimensionName?: string;
+          dimensionValue?: string;
+        }) => {
+          const awsConn = getAWSConnection();
+          if (!awsConn) {
+            return {
+              error: "No AWS account connected. Please go to Integrations and connect your AWS CloudWatch first.",
+              connected: false,
+            };
+          }
+          try {
+            const metrics = await fetchLiveCloudWatchMetrics(
+              awsConn.roleArn,
+              metricName,
+              namespace,
+              dimensionName,
+              dimensionValue
+            );
+            return {
+              connected: true,
+              live: true,
+              source: "AWS CloudWatch",
+              ...metrics,
+            };
+          } catch (err: unknown) {
+            return {
+              error: err instanceof Error ? err.message : "Failed to fetch AWS metrics",
+              connected: true,
+              live: false,
+            };
+          }
         },
       },
     },

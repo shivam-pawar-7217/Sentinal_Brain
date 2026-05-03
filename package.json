@@ -13,6 +13,8 @@
     "@ai-sdk/groq": "^3.0.35",
     "@ai-sdk/openai": "^3.0.53",
     "@ai-sdk/react": "^3.0.170",
+    "@aws-sdk/client-cloudwatch": "^3.1041.0",
+    "@aws-sdk/client-sts": "^3.1041.0",
     "ai": "^6.0.168",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

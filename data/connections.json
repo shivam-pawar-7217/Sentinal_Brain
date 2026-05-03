@@ -1,0 +1,7 @@
+{
+  "aws": {
+    "roleArn": "arn:aws:iam::500060134356:role/SentinelBrainReader",
+    "region": "us-east-1",
+    "connectedAt": "2026-05-03T06:07:25.447Z"
+  }
+}

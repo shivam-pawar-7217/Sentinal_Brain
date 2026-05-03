@@ -145,6 +145,24 @@ function renderToolResult(toolName: string, output: unknown) {
         </div>
       );
     }
+    case "analyzeAWSMetrics": {
+      const data = output as { metricName: string; namespace: string; dataPoints: MetricPoint[]; unit: string; period: string };
+      // Fallback empty data if no dataPoints (e.g. brand new account)
+      const dataPoints = data.dataPoints && data.dataPoints.length > 0 ? data.dataPoints : [
+        { time: new Date().toISOString(), value: 0 },
+        { time: new Date(Date.now() - 5 * 60000).toISOString(), value: 0 }
+      ];
+      return (
+        <div className="grid gap-3 lg:grid-cols-1">
+          <MetricChart 
+            title={`${data.namespace} - ${data.metricName}`} 
+            data={dataPoints} 
+            color="#FF9900" 
+            unit={data.unit === "None" ? "" : data.unit} 
+          />
+        </div>
+      );
+    }
     case "getRecentSlowLogs": {
       const logs = output as SlowLog[];
       return <LogTerminal title="Slow Query Log — production_primary" logs={logs} variant="slow-query" />;
