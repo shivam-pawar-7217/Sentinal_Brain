@@ -50,8 +50,8 @@ function AWSModal({ open, onClose, onConnected }: {
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // CloudFormation Quick-Create URL
-  const CF_TEMPLATE_URL = "https://sentinel-brain-public.s3.amazonaws.com/cloudformation/sentinel-brain-role.yaml";
+  // CloudFormation Quick-Create URL (points to our public GitHub raw file)
+  const CF_TEMPLATE_URL = "https://raw.githubusercontent.com/shivam-pawar-7217/Sentinal_Brain/main/public/sentinel-brain-role.yaml";
   const CF_LAUNCH_URL = `https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=${encodeURIComponent(CF_TEMPLATE_URL)}&stackName=SentinelBrainAccess`;
 
   if (!open) return null;

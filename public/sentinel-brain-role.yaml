@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Creates an IAM Role to allow SentinelBrain read-only access to CloudWatch metrics'
+
+Resources:
+  SentinelBrainRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'SentinelBrainReader'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              # This is SentinelBrain's AWS Account ID. It allows SentinelBrain's backend to assume this role.
+              AWS: 'arn:aws:iam::500060134356:root'
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess'
+
+Outputs:
+  RoleARN:
+    Description: 'The ARN of the IAM Role created for SentinelBrain. Copy this and paste it into the SentinelBrain dashboard.'
+    Value: !GetAtt SentinelBrainRole.Arn
