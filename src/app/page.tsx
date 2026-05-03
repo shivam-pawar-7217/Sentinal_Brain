@@ -149,9 +149,9 @@ function renderToolResult(toolName: string, output: unknown) {
       const data = output as { metricName: string; namespace: string; dataPoints: MetricPoint[]; unit: string; period: string };
       // Fallback empty data if no dataPoints (e.g. brand new account)
       const dataPoints = data.dataPoints && data.dataPoints.length > 0 ? data.dataPoints : [
-        { time: new Date().toISOString(), value: 0 },
-        { time: new Date(Date.now() - 5 * 60000).toISOString(), value: 0 }
-      ];
+        { timestamp: new Date().toISOString(), value: 0 },
+        { timestamp: new Date(Date.now() - 5 * 60000).toISOString(), value: 0 }
+      ] as any[];
       return (
         <div className="grid gap-3 lg:grid-cols-1">
           <MetricChart 
