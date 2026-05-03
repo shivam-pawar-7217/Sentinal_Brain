@@ -165,6 +165,20 @@ Behavioral rules:
           return getSystemHealth();
         },
       },
+      getConnectedIntegrations: {
+        description:
+          "Check which external integrations (like AWS CloudWatch, GitHub, etc.) are currently connected and active for the user. Call this to verify if the user has linked their external accounts before attempting to fetch live data.",
+        inputSchema: z.object({}),
+        execute: async () => {
+          const awsConn = await getAWSConnection();
+          const ghConn = await getGitHubConnection();
+          
+          return {
+            aws: awsConn ? { connected: true, roleArn: awsConn.roleArn } : { connected: false },
+            github: ghConn ? { connected: true, username: ghConn.username } : { connected: false },
+          };
+        },
+      },
       getRemediationActions: {
         description:
           "Get available remediation actions for the current incident. Returns a set of 'Danger Zone' operations like rollback, reboot, kill queries, and cache flush. Call this when the user needs to take action on an incident.",
