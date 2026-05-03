@@ -16,8 +16,9 @@ import { join } from "path";
 import { cookies } from "next/headers";
 
 // Read saved AWS connection
-function getAWSConnection(): { roleArn: string; region: string } | null {
-  const awsConnStr = cookies().get("sb_aws_conn")?.value;
+async function getAWSConnection(): Promise<{ roleArn: string; region: string } | null> {
+  const cookieStore = await cookies();
+  const awsConnStr = cookieStore.get("sb_aws_conn")?.value;
   if (!awsConnStr) return null;
   try {
     return JSON.parse(awsConnStr);
@@ -197,7 +198,7 @@ Behavioral rules:
           dimensionName?: string;
           dimensionValue?: string;
         }) => {
-          const awsConn = getAWSConnection();
+          const awsConn = await getAWSConnection();
           if (!awsConn) {
             return {
               error: "No AWS account connected. Please go to Integrations and connect your AWS CloudWatch first.",

@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { testAWSConnection } from "@/lib/aws";
 import { cookies } from "next/headers";
 
-function getAWSCookie() {
-  const awsConnStr = cookies().get("sb_aws_conn")?.value;
+async function getAWSCookie() {
+  const cookieStore = await cookies();
+  const awsConnStr = cookieStore.get("sb_aws_conn")?.value;
   if (!awsConnStr) return null;
   try {
     return JSON.parse(awsConnStr);
@@ -14,7 +15,7 @@ function getAWSCookie() {
 
 // GET — Return current AWS connection status
 export async function GET() {
-  const aws = getAWSCookie();
+  const aws = await getAWSCookie();
   return NextResponse.json({
     connected: !!aws,
     roleArn: aws?.roleArn || null,
@@ -62,7 +63,8 @@ export async function POST(req: Request) {
     region: region || process.env.AWS_REGION || "us-east-1",
     connectedAt: new Date().toISOString(),
   };
-  cookies().set("sb_aws_conn", JSON.stringify(awsData), { path: "/", maxAge: 60 * 60 * 24 * 30 });
+  const cookieStore = await cookies();
+  cookieStore.set("sb_aws_conn", JSON.stringify(awsData), { path: "/", maxAge: 60 * 60 * 24 * 30 });
 
   return NextResponse.json({
     success: true,
@@ -72,6 +74,7 @@ export async function POST(req: Request) {
 
 // DELETE — Remove the connection
 export async function DELETE() {
-  cookies().delete("sb_aws_conn");
+  const cookieStore = await cookies();
+  cookieStore.delete("sb_aws_conn");
   return NextResponse.json({ success: true });
 }
