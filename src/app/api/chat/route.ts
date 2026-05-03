@@ -27,6 +27,18 @@ async function getAWSConnection(): Promise<{ roleArn: string; region: string } |
   }
 }
 
+// Read saved GitHub connection
+async function getGitHubConnection(): Promise<{ token: string; username: string } | null> {
+  const cookieStore = await cookies();
+  const ghConnStr = cookieStore.get("sb_github_conn")?.value;
+  if (!ghConnStr) return null;
+  try {
+    return JSON.parse(ghConnStr);
+  } catch {
+    return null;
+  }
+}
+
 export const maxDuration = 60;
 
 // Search the knowledge base runbooks by keyword relevance
@@ -222,6 +234,65 @@ Behavioral rules:
           } catch (err: unknown) {
             return {
               error: err instanceof Error ? err.message : "Failed to fetch AWS metrics",
+              connected: true,
+              live: false,
+            };
+          }
+        },
+      },
+      analyzeGitHubActivity: {
+        description:
+          "Fetch LIVE recent activity (commits or issues) from a GitHub repository using the user's connected Personal Access Token. Use this to find recent deployments, buggy commits, or known issues related to an incident.",
+        inputSchema: z.object({
+          owner: z.string().describe("The repository owner or organization (e.g., 'vercel')."),
+          repo: z.string().describe("The repository name (e.g., 'next.js')."),
+          type: z.enum(["commits", "issues"]).describe("Whether to fetch recent 'commits' or 'issues'."),
+        }),
+        execute: async ({ owner, repo, type }: { owner: string; repo: string; type: "commits" | "issues" }) => {
+          const ghConn = await getGitHubConnection();
+          if (!ghConn) {
+            return {
+              error: "No GitHub account connected. Please go to Integrations and connect your GitHub token first.",
+              connected: false,
+            };
+          }
+          try {
+            const url = `https://api.github.com/repos/${owner}/${repo}/${type}?per_page=5`;
+            const res = await fetch(url, {
+              headers: {
+                Authorization: `Bearer ${ghConn.token}`,
+                Accept: "application/vnd.github.v3+json",
+              },
+            });
+            if (!res.ok) throw new Error(`GitHub API error: ${res.statusText}`);
+            const data = await res.json();
+            
+            return {
+              connected: true,
+              live: true,
+              source: `GitHub (${type})`,
+              data: data.map((item: any) => 
+                type === "commits" 
+                ? {
+                    sha: item.sha.substring(0, 7),
+                    author: item.commit.author.name,
+                    message: item.commit.message,
+                    date: item.commit.author.date,
+                    url: item.html_url
+                  }
+                : {
+                    number: item.number,
+                    title: item.title,
+                    state: item.state,
+                    user: item.user.login,
+                    created_at: item.created_at,
+                    url: item.html_url
+                  }
+              ),
+            };
+          } catch (err: unknown) {
+            return {
+              error: err instanceof Error ? err.message : "Failed to fetch GitHub data",
               connected: true,
               live: false,
             };

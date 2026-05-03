@@ -21,16 +21,14 @@ const INTEGRATIONS: Integration[] = [
   { id: "aws", name: "AWS CloudWatch", category: "Cloud", description: "EC2, RDS, Lambda metrics & alarms", connected: false, isReal: true },
   { id: "azure", name: "Azure Monitor", category: "Cloud", description: "VMs, SQL, AKS cluster telemetry", connected: false },
   { id: "gcp", name: "Google Cloud Ops", category: "Cloud", description: "GCE, Cloud SQL, GKE monitoring", connected: false },
-  { id: "datadog", name: "Datadog", category: "Monitoring", description: "APM, infrastructure metrics, logs", connected: false },
   { id: "grafana", name: "Grafana Cloud", category: "Monitoring", description: "Prometheus, Loki, Tempo", connected: false },
   { id: "newrelic", name: "New Relic", category: "Monitoring", description: "Full-stack observability", connected: false },
-  { id: "pagerduty", name: "PagerDuty", category: "Incidents", description: "Alerting, on-call, escalations", connected: false },
   { id: "opsgenie", name: "Opsgenie", category: "Incidents", description: "Alert routing, incident workflows", connected: false },
   { id: "slack", name: "Slack", category: "Comms", description: "Alert channels, war rooms", connected: false },
   { id: "teams", name: "Microsoft Teams", category: "Comms", description: "Notifications, adaptive cards", connected: false },
   { id: "kubernetes", name: "Kubernetes", category: "Infra", description: "Cluster health, pods, deployments", connected: false },
   { id: "terraform", name: "Terraform Cloud", category: "Infra", description: "State, drift detection, plans", connected: false },
-  { id: "github", name: "GitHub Actions", category: "CI/CD", description: "Pipelines, commits, PR checks", connected: false },
+  { id: "github", name: "GitHub", category: "CI/CD", description: "Repositories, commits, PR checks", connected: false, isReal: true },
   { id: "argocd", name: "Argo CD", category: "CI/CD", description: "GitOps, sync status, rollbacks", connected: false },
 ];
 
@@ -367,6 +365,135 @@ function AWSModal({ open, onClose, onConnected, onDisconnected, isConnected, con
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+function GitHubModal({ open, onClose, onConnected, onDisconnected, isConnected, connectedUsername }: {
+  open: boolean;
+  onClose: () => void;
+  onConnected: (username: string) => void;
+  onDisconnected: () => void;
+  isConnected: boolean;
+  connectedUsername: string | null;
+}) {
+  const [token, setToken] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  if (!open) return null;
+
+  const handleConnect = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/integrations/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        onConnected(data.username);
+        onClose();
+        setToken("");
+      } else {
+        setTestResult({ success: false, message: data.error || "Connection failed" });
+      }
+    } catch {
+      setTestResult({ success: false, message: "Network error" });
+    }
+    setTesting(false);
+  };
+
+  const handleDisconnect = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch("/api/integrations/github", { method: "DELETE" });
+      if (res.ok) {
+        onDisconnected();
+        onClose();
+      }
+    } catch {}
+    setTesting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="relative w-full max-w-md rounded-2xl border border-white/[0.06] bg-[#0c0f15] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
+              {logos.github}
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white">{isConnected ? "GitHub Settings" : "Connect GitHub"}</h2>
+              <p className="text-[10px] text-slate-500">{isConnected ? "Integration Active" : "Personal Access Token"}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white/5 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {isConnected ? (
+          <div>
+            <div className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
+                  <Check className="h-3 w-3 text-emerald-400" />
+                </div>
+                <h3 className="text-xs font-semibold text-emerald-400">Connection Healthy</h3>
+              </div>
+              <p className="text-[11px] text-slate-400">SentinelBrain is actively connected as <span className="font-semibold text-slate-200">@{connectedUsername}</span>.</p>
+            </div>
+
+            <button
+              onClick={handleDisconnect}
+              disabled={testing}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/10 py-3 text-xs font-semibold text-red-400 transition-all hover:bg-red-500/20 disabled:opacity-40"
+            >
+              {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+              Disconnect GitHub
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="mb-4 text-xs text-slate-400">
+              Create a <a href="https://github.com/settings/tokens?type=beta" target="_blank" className="text-indigo-400 hover:underline">Fine-grained Personal Access Token</a> with <span className="font-semibold text-slate-200">Read-Only</span> access to code, pull requests, and issues.
+            </p>
+
+            <div className="mb-4">
+              <label className="mb-1.5 block text-xs font-medium text-slate-400">Personal Access Token</label>
+              <input
+                value={token}
+                onChange={(e) => { setToken(e.target.value); setTestResult(null); }}
+                type="password"
+                placeholder="github_pat_..."
+                className="w-full rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 font-mono text-xs text-slate-200 placeholder-slate-600 outline-none transition-all focus:border-indigo-500/30 focus:ring-1 focus:ring-indigo-500/10"
+              />
+            </div>
+
+            {testResult && (
+              <div className={`mb-4 rounded-lg border p-3 ${testResult.success ? "border-emerald-500/20 bg-emerald-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+                <div className="flex items-center gap-2 text-[11px]">
+                  {testResult.success ? <Check className="h-3 w-3 text-emerald-400" /> : <AlertCircle className="h-3 w-3 text-red-400" />}
+                  <span className={testResult.success ? "text-emerald-400" : "text-red-400"}>{testResult.message}</span>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleConnect}
+              disabled={!token || testing}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-white text-black py-2.5 text-xs font-semibold shadow-lg transition-all hover:bg-slate-200 disabled:opacity-40"
+            >
+              {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Connect GitHub"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function IntegrationsPage() {
   const router = useRouter();
   const [tab, setTab] = useState("All");
@@ -374,6 +501,9 @@ export default function IntegrationsPage() {
   const [items, setItems] = useState(INTEGRATIONS);
   const [awsModalOpen, setAwsModalOpen] = useState(false);
   const [awsArn, setAwsArn] = useState<string | null>(null);
+  
+  const [githubModalOpen, setGithubModalOpen] = useState(false);
+  const [githubUsername, setGithubUsername] = useState<string | null>(null);
 
   useEffect(() => {
     if (!localStorage.getItem("sb_auth")) router.replace("/login");
@@ -393,11 +523,30 @@ export default function IntegrationsPage() {
         }
       })
       .catch(() => {});
+
+    // Check if GitHub is already connected
+    fetch("/api/integrations/github")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.connected) {
+          setGithubUsername(data.username);
+          setItems((prev) =>
+            prev.map((i) =>
+              i.id === "github"
+                ? { ...i, connected: true, status: "healthy" as const, lastSync: "Live", throughput: "REST API" }
+                : i
+            )
+          );
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
   const handleCardClick = (id: string, isReal?: boolean) => {
     if (id === "aws") {
       setAwsModalOpen(true);
+    } else if (id === "github") {
+      setGithubModalOpen(true);
     } else if (!isReal) {
       // Coming soon — do nothing
     }
@@ -419,6 +568,22 @@ export default function IntegrationsPage() {
     setItems((prev) => prev.map((i) => i.id === "aws" ? { ...i, connected: false } : i));
   };
 
+  const handleGitHubConnected = (username: string) => {
+    setGithubUsername(username);
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === "github"
+          ? { ...i, connected: true, status: "healthy" as const, lastSync: "Just now", throughput: "REST API" }
+          : i
+      )
+    );
+  };
+
+  const handleGitHubDisconnected = () => {
+    setGithubUsername(null);
+    setItems((prev) => prev.map((i) => i.id === "github" ? { ...i, connected: false } : i));
+  };
+
   const list = items.filter((i) => {
     if (tab !== "All" && i.category !== tab) return false;
     if (search && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -429,7 +594,7 @@ export default function IntegrationsPage() {
 
   return (
     <div className="min-h-screen bg-[#050709] text-slate-200">
-      {/* AWS Modal */}
+      {/* Modals */}
       <AWSModal 
         open={awsModalOpen} 
         onClose={() => setAwsModalOpen(false)} 
@@ -437,6 +602,14 @@ export default function IntegrationsPage() {
         onDisconnected={handleAWSDisconnected}
         isConnected={items.find(i => i.id === "aws")?.connected || false}
         connectedArn={awsArn}
+      />
+      <GitHubModal
+        open={githubModalOpen}
+        onClose={() => setGithubModalOpen(false)}
+        onConnected={handleGitHubConnected}
+        onDisconnected={handleGitHubDisconnected}
+        isConnected={items.find(i => i.id === "github")?.connected || false}
+        connectedUsername={githubUsername}
       />
 
       {/* Header */}

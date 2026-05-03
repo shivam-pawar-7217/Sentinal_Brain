@@ -163,6 +163,51 @@ function renderToolResult(toolName: string, output: unknown) {
         </div>
       );
     }
+    case "analyzeGitHubActivity": {
+      const { source, data } = output as { source: string; data: any[] };
+      if (!data) return <div className="text-xs text-red-400 border border-red-500/20 bg-red-500/10 p-3 rounded-lg">{(output as any).error || "GitHub Connection Error"}</div>;
+      return (
+        <div className="rounded-xl border border-white/[0.06] bg-[#0c0f15] overflow-hidden">
+          <div className="border-b border-white/[0.06] bg-white/[0.02] px-4 py-3">
+            <h4 className="text-xs font-semibold text-white">{source}</h4>
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {data.map((item, i) => (
+              <div key={i} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                {item.sha ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <a href={item.url} target="_blank" className="font-mono text-xs text-indigo-400 hover:underline">{item.sha}</a>
+                      <span className="text-[10px] text-slate-500">{new Date(item.date).toLocaleString()}</span>
+                    </div>
+                    <p className="text-xs text-slate-300 font-medium mb-1">{item.message.split('\n')[0]}</p>
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-4 w-4 rounded-full bg-indigo-500/20 flex items-center justify-center text-[8px] text-indigo-400 font-bold">{item.author[0]}</div>
+                      <span className="text-[10px] text-slate-400">{item.author}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${item.state === 'open' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>{item.state}</span>
+                        <a href={item.url} target="_blank" className="text-xs font-medium text-slate-200 hover:text-indigo-400">#{item.number} {item.title}</a>
+                      </div>
+                      <span className="text-[10px] text-slate-500">{new Date(item.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <div className="h-4 w-4 rounded-full bg-slate-700 flex items-center justify-center text-[8px] text-slate-300 font-bold">{item.user[0]}</div>
+                      <span className="text-[10px] text-slate-400">Opened by {item.user}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {data.length === 0 && <div className="px-4 py-4 text-xs text-slate-500 text-center">No recent activity found.</div>}
+          </div>
+        </div>
+      );
+    }
     case "getRecentSlowLogs": {
       const logs = output as SlowLog[];
       return <LogTerminal title="Slow Query Log — production_primary" logs={logs} variant="slow-query" />;
