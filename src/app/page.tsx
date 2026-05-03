@@ -353,12 +353,17 @@ export default function SentinelBrainPage() {
     return session ? session.messages : [];
   }, []);
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, setMessages, sendMessage, status, error } = useChat({
     transport,
-    // @ts-expect-error - initialMessages is supported at runtime in AI SDK v6 but may have type mismatch
-    initialMessages,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
+
+  // Load history into the chat state after mount
+  useEffect(() => {
+    if (mounted && initialMessages.length > 0 && messages.length === 0) {
+      setMessages(initialMessages);
+    }
+  }, [mounted, initialMessages, messages, setMessages]);
 
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
