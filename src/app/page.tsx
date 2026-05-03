@@ -343,8 +343,20 @@ export default function SentinelBrainPage() {
     }
   }, [mounted]);
 
+  // Load initial messages for useChat
+  const initialMessages = useMemo(() => {
+    if (typeof window === "undefined") return [];
+    const stored = loadSessions();
+    const activeId = localStorage.getItem(ACTIVE_KEY);
+    if (!activeId) return [];
+    const session = stored.find((s) => s.id === activeId);
+    return session ? session.messages : [];
+  }, []);
+
   const { messages, sendMessage, status, error } = useChat({
     transport,
+    // @ts-expect-error - initialMessages is supported at runtime in AI SDK v6 but may have type mismatch
+    initialMessages,
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
 
