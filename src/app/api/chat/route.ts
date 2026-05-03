@@ -175,10 +175,17 @@ Behavioral rules:
           "Check which external integrations (like AWS CloudWatch, GitHub, etc.) are currently connected and active for the user. Call this to verify if the user has linked their external accounts before attempting to fetch live data.",
         inputSchema: z.object({}),
         execute: async () => {
-          return {
-            aws: awsConn ? { connected: true, roleArn: awsConn.roleArn } : { connected: false },
-            github: ghConn ? { connected: true, username: ghConn.username } : { connected: false },
-          };
+          try {
+            const aws = await getAWSConnection();
+            const gh = await getGitHubConnection();
+            return {
+              aws: aws ? { connected: true, roleArn: aws.roleArn } : { connected: false },
+              github: gh ? { connected: true, username: gh.username } : { connected: false },
+            };
+          } catch (err) {
+            console.error("Tool execution error:", err);
+            return { error: "Failed to fetch integration status" };
+          }
         },
       },
       getRemediationActions: {

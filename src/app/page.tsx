@@ -163,6 +163,29 @@ function renderToolResult(toolName: string, output: unknown) {
         </div>
       );
     }
+    case "getConnectedIntegrations": {
+      const data = output as { aws: { connected: boolean; roleArn?: string }; github: { connected: boolean; username?: string } };
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          <div className={`rounded-xl border p-4 ${data.aws.connected ? "border-emerald-500/20 bg-emerald-500/5" : "border-white/[0.06] bg-white/[0.02]"}`}>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">AWS CloudWatch</span>
+              <div className={`h-1.5 w-1.5 rounded-full ${data.aws.connected ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-700"}`} />
+            </div>
+            <p className="text-xs font-semibold text-white">{data.aws.connected ? "Connected" : "Not Linked"}</p>
+            {data.aws.roleArn && <p className="mt-1 truncate font-mono text-[10px] text-slate-500">{data.aws.roleArn}</p>}
+          </div>
+          <div className={`rounded-xl border p-4 ${data.github.connected ? "border-indigo-500/20 bg-indigo-500/5" : "border-white/[0.06] bg-white/[0.02]"}`}>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GitHub</span>
+              <div className={`h-1.5 w-1.5 rounded-full ${data.github.connected ? "bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" : "bg-slate-700"}`} />
+            </div>
+            <p className="text-xs font-semibold text-white">{data.github.connected ? "Connected" : "Not Linked"}</p>
+            {data.github.username && <p className="mt-1 text-[10px] text-slate-500">@{data.github.username}</p>}
+          </div>
+        </div>
+      );
+    }
     case "analyzeGitHubActivity": {
       const { source, data } = output as { source: string; data: any[] };
       if (!data) return <div className="text-xs text-red-400 border border-red-500/20 bg-red-500/10 p-3 rounded-lg">{(output as any).error || "GitHub Connection Error"}</div>;
@@ -337,9 +360,9 @@ export default function SentinelBrainPage() {
     }
   }, [messages]);
 
-  // Persist messages to session whenever they change
+  // Persist messages to session ONLY when idle or on mount
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (messages.length === 0 || isStreaming) return;
 
     const sessionId = activeSessionId || generateSessionId();
 
@@ -369,11 +392,10 @@ export default function SentinelBrainPage() {
     });
 
     if (!activeSessionId) {
-      const newId = sessionId;
-      setActiveSessionId(newId);
-      localStorage.setItem(ACTIVE_KEY, newId);
+      setActiveSessionId(sessionId);
+      localStorage.setItem(ACTIVE_KEY, sessionId);
     }
-  }, [messages, activeSessionId]);
+  }, [messages, activeSessionId, isStreaming]);
 
   // Notification sound for critical tool results
   useEffect(() => {
