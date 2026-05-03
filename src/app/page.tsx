@@ -355,25 +355,18 @@ export default function SentinelBrainPage() {
     setMounted(true);
   }, []);
 
-  // Load sessions from localStorage on mount
+  // Load sessions from localStorage on mount (but don't auto-load the last one)
   useEffect(() => {
     if (!mounted) return;
     const stored = loadSessions();
     setSessions(stored);
-    const activeId = localStorage.getItem(ACTIVE_KEY);
-    if (activeId && stored.find((s) => s.id === activeId)) {
-      setActiveSessionId(activeId);
-    }
+    // Removed the logic that auto-sets activeSessionId from localStorage
+    // to satisfy the requirement: "when someone opens it will open to new start"
   }, [mounted]);
 
   // Load initial messages for useChat
   const initialMessages = useMemo(() => {
-    if (typeof window === "undefined") return [];
-    const stored = loadSessions();
-    const activeId = localStorage.getItem(ACTIVE_KEY);
-    if (!activeId) return [];
-    const session = stored.find((s) => s.id === activeId);
-    return session ? session.messages : [];
+    return [];
   }, []);
 
   const { messages, setMessages, sendMessage, status, error } = useChat({
@@ -483,16 +476,20 @@ export default function SentinelBrainPage() {
   const handleNewSession = useCallback(() => {
     setActiveSessionId(null);
     localStorage.removeItem(ACTIVE_KEY);
-    window.location.href = "/";
-  }, []);
+    setMessages([]);
+  }, [setMessages]);
 
   const handleSelectSession = useCallback(
     (id: string) => {
       setActiveSessionId(id);
       localStorage.setItem(ACTIVE_KEY, id);
-      window.location.reload();
+      const stored = loadSessions();
+      const session = stored.find((s) => s.id === id);
+      if (session) {
+        setMessages(session.messages);
+      }
     },
-    []
+    [setMessages]
   );
 
   const handleDeleteSession = useCallback(
