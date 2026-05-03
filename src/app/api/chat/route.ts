@@ -13,11 +13,14 @@ import knowledgeBase from "@/lib/knowledge.json";
 import { readFileSync } from "fs";
 import { join } from "path";
 
+import { cookies } from "next/headers";
+
 // Read saved AWS connection
 function getAWSConnection(): { roleArn: string; region: string } | null {
+  const awsConnStr = cookies().get("sb_aws_conn")?.value;
+  if (!awsConnStr) return null;
   try {
-    const data = JSON.parse(readFileSync(join(process.cwd(), "data", "connections.json"), "utf-8"));
-    return data.aws || null;
+    return JSON.parse(awsConnStr);
   } catch {
     return null;
   }

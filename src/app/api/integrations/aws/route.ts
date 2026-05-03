@@ -1,30 +1,25 @@
 import { NextResponse } from "next/server";
-import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
 import { testAWSConnection } from "@/lib/aws";
+import { cookies } from "next/headers";
 
-const CONNECTIONS_PATH = join(process.cwd(), "data", "connections.json");
-
-function readConnections() {
+function getAWSCookie() {
+  const awsConnStr = cookies().get("sb_aws_conn")?.value;
+  if (!awsConnStr) return null;
   try {
-    return JSON.parse(readFileSync(CONNECTIONS_PATH, "utf-8"));
+    return JSON.parse(awsConnStr);
   } catch {
-    return { aws: null };
+    return null;
   }
-}
-
-function writeConnections(data: Record<string, unknown>) {
-  writeFileSync(CONNECTIONS_PATH, JSON.stringify(data, null, 2));
 }
 
 // GET — Return current AWS connection status
 export async function GET() {
-  const connections = readConnections();
+  const aws = getAWSCookie();
   return NextResponse.json({
-    connected: !!connections.aws,
-    roleArn: connections.aws?.roleArn || null,
-    region: connections.aws?.region || null,
-    connectedAt: connections.aws?.connectedAt || null,
+    connected: !!aws,
+    roleArn: aws?.roleArn || null,
+    region: aws?.region || null,
+    connectedAt: aws?.connectedAt || null,
   });
 }
 
@@ -34,7 +29,6 @@ export async function POST(req: Request) {
   const { roleArn, region, testOnly } = body;
 
   if (!roleArn || !roleArn.startsWith("arn:aws:iam::")) {
-    // Allow both arn:aws:iam:: formats
     if (!roleArn?.match(/^arn:aws:iam::\d{12}:role\/.+$/)) {
       return NextResponse.json(
         { error: "Invalid IAM Role ARN format. Expected: arn:aws:iam::<account-id>:role/<role-name>" },
@@ -62,14 +56,13 @@ export async function POST(req: Request) {
     }
   }
 
-  // Save the connection
-  const connections = readConnections();
-  connections.aws = {
+  // Save the connection in a cookie
+  const awsData = {
     roleArn,
     region: region || process.env.AWS_REGION || "us-east-1",
     connectedAt: new Date().toISOString(),
   };
-  writeConnections(connections);
+  cookies().set("sb_aws_conn", JSON.stringify(awsData), { path: "/", maxAge: 60 * 60 * 24 * 30 });
 
   return NextResponse.json({
     success: true,
@@ -79,8 +72,6 @@ export async function POST(req: Request) {
 
 // DELETE — Remove the connection
 export async function DELETE() {
-  const connections = readConnections();
-  connections.aws = null;
-  writeConnections(connections);
+  cookies().delete("sb_aws_conn");
   return NextResponse.json({ success: true });
 }
