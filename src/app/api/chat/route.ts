@@ -106,7 +106,8 @@ Behavioral rules:
 9. Format your analysis in well-structured markdown with clear sections: **Impact**, **Root Cause**, **Evidence**, **Historical Context**, **Recommended Actions**.
 10. Always call multiple tools when relevant — show the full picture.
 11. When referencing past incidents, say things like "Based on our runbook, the last time this happened on [date], we resolved it by..."
-12. Include the on-call engineer and escalation path when severity is P0 or P1.`,
+12. Include the on-call engineer and escalation path when severity is P0 or P1.
+13. IMPORTANT: When using GitHub tools, NEVER guess or assume a repository name. If the user hasn't specified a repository (e.g., "owner/repo"), you MUST ask them which repository they want to analyze. Do not attempt to call analyzeGitHubActivity with placeholder names like "github-repo-sample" or "connectde".`,
     messages: await convertToModelMessages(messages),
     tools: {
       fetchDBMetrics: {
@@ -256,10 +257,10 @@ Behavioral rules:
       },
       analyzeGitHubActivity: {
         description:
-          "Fetch LIVE recent activity (commits or issues) from a GitHub repository using the user's connected Personal Access Token. Use this to find recent deployments, buggy commits, or known issues related to an incident.",
+          "Fetch LIVE recent activity (commits or issues) from a specific GitHub repository. Requires a valid 'owner' and 'repo' name. IMPORTANT: Do not guess these values; ask the user if they are not provided.",
         inputSchema: z.object({
-          owner: z.string().describe("The repository owner or organization (e.g., 'vercel')."),
-          repo: z.string().describe("The repository name (e.g., 'next.js')."),
+          owner: z.string().describe("The repository owner or organization (e.g., 'vercel'). REQUIRED. DO NOT GUESS."),
+          repo: z.string().describe("The repository name (e.g., 'next.js'). REQUIRED. DO NOT GUESS."),
           type: z.enum(["commits", "issues"]).describe("Whether to fetch recent 'commits' or 'issues'."),
         }),
         execute: async ({ owner, repo, type }: { owner: string; repo: string; type: "commits" | "issues" }) => {
