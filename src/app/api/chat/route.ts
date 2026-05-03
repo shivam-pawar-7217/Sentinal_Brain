@@ -78,6 +78,10 @@ function errorHandler(error: unknown) {
 export async function POST(req: Request) {
   const { messages }: { messages: UIMessage[] } = await req.json();
 
+  // Read cookies at the top level BEFORE streaming starts
+  const awsConn = await getAWSConnection();
+  const ghConn = await getGitHubConnection();
+
   const result = streamText({
     model: groq("llama-3.1-8b-instant"),
     system: `You are SentinelBrain, an elite AI-native DevOps copilot. You are the "Second Brain" for a platform engineering team.
@@ -170,9 +174,6 @@ Behavioral rules:
           "Check which external integrations (like AWS CloudWatch, GitHub, etc.) are currently connected and active for the user. Call this to verify if the user has linked their external accounts before attempting to fetch live data.",
         inputSchema: z.object({}),
         execute: async () => {
-          const awsConn = await getAWSConnection();
-          const ghConn = await getGitHubConnection();
-          
           return {
             aws: awsConn ? { connected: true, roleArn: awsConn.roleArn } : { connected: false },
             github: ghConn ? { connected: true, username: ghConn.username } : { connected: false },
@@ -224,7 +225,6 @@ Behavioral rules:
           dimensionName?: string;
           dimensionValue?: string;
         }) => {
-          const awsConn = await getAWSConnection();
           if (!awsConn) {
             return {
               error: "No AWS account connected. Please go to Integrations and connect your AWS CloudWatch first.",
@@ -263,7 +263,6 @@ Behavioral rules:
           type: z.enum(["commits", "issues"]).describe("Whether to fetch recent 'commits' or 'issues'."),
         }),
         execute: async ({ owner, repo, type }: { owner: string; repo: string; type: "commits" | "issues" }) => {
-          const ghConn = await getGitHubConnection();
           if (!ghConn) {
             return {
               error: "No GitHub account connected. Please go to Integrations and connect your GitHub token first.",
