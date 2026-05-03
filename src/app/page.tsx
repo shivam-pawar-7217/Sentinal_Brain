@@ -483,28 +483,20 @@ export default function SentinelBrainPage() {
   const handleNewSession = useCallback(() => {
     setActiveSessionId(null);
     localStorage.removeItem(ACTIVE_KEY);
-    setMessages([]); // Clear current messages immediately
-    // No hard reload needed if we use the key trick in the render
-  }, [setMessages]);
+    window.location.href = "/";
+  }, []);
 
   const handleSelectSession = useCallback(
     (id: string) => {
       setActiveSessionId(id);
       localStorage.setItem(ACTIVE_KEY, id);
-      const stored = loadSessions();
-      const session = stored.find((s) => s.id === id);
-      if (session) {
-        setMessages(session.messages);
-      }
+      window.location.reload();
     },
-    [setMessages]
+    []
   );
 
   const handleDeleteSession = useCallback(
     (id: string) => {
-      if (!window.confirm("Are you sure you want to delete this incident history? This action cannot be undone.")) {
-        return;
-      }
       setSessions((prev) => {
         const updated = prev.filter((s) => s.id !== id);
         saveSessions(updated);

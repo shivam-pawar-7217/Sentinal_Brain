@@ -35,9 +35,12 @@ export function Sidebar({
   onDeleteSession,
 }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   return (
     <>
+      {/* ... toggle button and backdrop ... */}
+      {/* ... existing code ... */}
       {/* Toggle Button (always visible) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -117,15 +120,42 @@ export function Sidebar({
                         <span>{session.messageCount} msgs</span>
                       </div>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteSession(session.id);
-                      }}
-                      className="mt-0.5 hidden rounded p-1 text-slate-700 transition-colors hover:bg-red-500/10 hover:text-red-400 group-hover:block"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      {deletingId === session.id ? (
+                        <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteSession(session.id);
+                              setDeletingId(null);
+                            }}
+                            className="rounded bg-red-500/20 px-1.5 py-0.5 text-[9px] font-bold text-red-400 hover:bg-red-500/30"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingId(null);
+                            }}
+                            className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-white/10"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingId(session.id);
+                          }}
+                          className="rounded p-1 text-slate-700 transition-colors hover:bg-red-500/10 hover:text-red-400"
+                          title="Delete chat"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
