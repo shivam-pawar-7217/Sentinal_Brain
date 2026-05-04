@@ -168,14 +168,14 @@ export function getRecentSlowLogs(): SlowLog[] {
     },
   ];
 
-  return queries.map((q, i) => ({
+  return queries.slice(0, 4).map((q, i) => ({
     id: `slow_${Date.now()}_${i}`,
     timestamp: new Date(now.getTime() - (queries.length - i) * 32000)
       .toISOString()
       .replace("T", " ")
       .substring(0, 19),
     duration_ms: Math.round(800 + Math.random() * 4200), // 800ms to 5000ms
-    query: q.query,
+    query: q.query.length > 100 ? q.query.substring(0, 100) + "..." : q.query,
     source: q.source,
     rows_examined: Math.round(50000 + Math.random() * 2000000),
     rows_sent: Math.round(1 + Math.random() * 500),
