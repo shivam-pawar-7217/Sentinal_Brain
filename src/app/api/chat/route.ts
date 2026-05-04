@@ -83,7 +83,7 @@ export async function POST(req: Request) {
   const ghConn = await getGitHubConnection();
 
   const result = streamText({
-    model: groq("llama-3.1-70b-versatile"),
+    model: groq("llama-3.3-70b-versatile"),
     system: `You are SentinelBrain, an elite AI-native DevOps copilot. You are the "Second Brain" for a platform engineering team.
 
 Your capabilities:
